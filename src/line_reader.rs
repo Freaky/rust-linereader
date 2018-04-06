@@ -7,7 +7,6 @@ LineReader: 501636842 lines in 102.173938545
 */
 
 use std::io;
-// use std::slice::Split;
 
 const NEWLINE: u8 = b'\n';
 
@@ -17,7 +16,7 @@ pub struct LineReader<T> {
     buf: Vec<u8>,
     pos: Option<usize>,
     last_newline: usize,
-    // split: Option<Split<&'a [u8], &'a [u8]>>,
+    end_of_buffer: usize,
 }
 
 impl <T: io::Read>LineReader<T> {
@@ -25,43 +24,35 @@ impl <T: io::Read>LineReader<T> {
         LineReader {
              io,
              eof: false,
-             buf: Vec::with_capacity(1024 * 128),
-             // split: None,
+             buf: vec![0; 1024 * 128],
              pos: None,
              last_newline: 0,
+             end_of_buffer: 0,
         }
     }
 
     fn refill(&mut self) -> io::Result<bool> {
-        // self.split = None;
         self.pos = Some(0);
 
-        // println!("Drain to {}", self.last_newline);
         // Move the start of the next line, if any, to the start of buf
-        self.buf.drain(0..self.last_newline).count();
+        if self.last_newline > 0 {
+            let next_line_len = self.end_of_buffer - self.last_newline;
+            let (start, rest) = self.buf.split_at_mut(self.last_newline);
+            start[0..next_line_len].copy_from_slice(&rest[0..next_line_len]);
+            self.end_of_buffer = next_line_len;
+        } else {
+            self.end_of_buffer = 0;
+        }
 
         // Fill the rest of buf from the underlying IO
-        let len = self.buf.len();
-        let cap = self.buf.capacity();
-
-        // println!("fill buf {}..{}", len, cap);
-        let r = unsafe {
-            self.buf.set_len(cap);
-            let r = self.io.read(&mut self.buf[len..cap])?;
-            self.buf.set_len(len + r);
-            r
-        };
+        let r = self.io.read(&mut self.buf[self.end_of_buffer..])?;
+        self.end_of_buffer += r;
 
         self.eof = r == 0;
-        // println!("fill buf -> {}", r);
-
         // Find the new last end of line, unless we're at EOF
         // XXX: What's sensible behavior for missing newlines?
-        self.last_newline = self.buf.iter().rposition(|&c| c == NEWLINE).unwrap_or(self.buf.len());
-        // println!("last newline: {}", self.last_newline);
+        self.last_newline = self.buf[..self.end_of_buffer].iter().rposition(|&c| c == NEWLINE).unwrap_or(self.end_of_buffer);
 
-        // Make a new split iterator on the updated buf
-        // self.split = &self.buf[0..self.last_newline].split(|b| b == NEWLINE);
         Ok(r > 0)
     }
 
@@ -71,7 +62,7 @@ impl <T: io::Read>LineReader<T> {
         }
         use std::io::{Error, ErrorKind};
         if let Some(pos) = self.pos {
-            let nextpos = 1 + pos + self.buf[pos..].iter().position(|&c| c == NEWLINE).unwrap_or(self.buf.len() - pos);
+            let nextpos = 1 + pos + self.buf[pos..self.end_of_buffer].iter().position(|&c| c == NEWLINE).unwrap_or(self.buf.len() - pos);
             // println!("current={} next={}", pos, nextpos);
             if nextpos < self.last_newline {
                 // println!("advance to {}", nextpos);
@@ -84,7 +75,7 @@ impl <T: io::Read>LineReader<T> {
 
         match self.refill() {
             Ok(true) => { self.next_line() },
-            Ok(false) => { Ok(&self.buf) },
+            Ok(false) => { Ok(&self.buf[..self.end_of_buffer]) },
             Err(e) => { Err(e) }
         }
     }

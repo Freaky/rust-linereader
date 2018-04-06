@@ -15,12 +15,14 @@ fn try_linereader(filename: &str) {
 
     let start = Instant::now();
     let mut count = 0;
+    let mut bytes = 0;
     while let Ok(line) = reader.next_line() {
+        bytes += line.len();
         count += 1;
     }
 
     let elapsed = start.elapsed();
-    println!("LineReader: {} lines in {}", count, (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0));
+    println!("LineReader: {} lines {} bytes in {}", count, bytes, (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0));
 }
 
 fn try_lines_read_until(filename: &str) {
@@ -29,14 +31,16 @@ fn try_lines_read_until(filename: &str) {
 
     let start = Instant::now();
     let mut count = 0;
+    let mut bytes = 0;
     let mut line: Vec<u8> = Vec::with_capacity(128);
     while infile.read_until(b'\n', &mut line).unwrap_or(0) > 0 {
+        bytes += line.len();
         count += 1;
         line.clear();
     }
 
     let elapsed = start.elapsed();
-    println!("read_until: {} lines in {}", count, (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0));
+    println!("read_until: {} lines {} bytes in {}", count, bytes, (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0));
 }
 
 fn try_lines_iter(filename: &str) {
@@ -44,16 +48,20 @@ fn try_lines_iter(filename: &str) {
     let infile = BufReader::new(infile);
 
     let start = Instant::now();
+    let mut bytes = 0;
     let mut count = 0;
     for line in infile.lines() {
+        bytes += line.unwrap().len();
         count += 1;
     }
 
     let elapsed = start.elapsed();
-    println!("lines(): {} lines in {}", count, (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0));
+    println!("lines(): {} lines {} bytes in {}", count, bytes, (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0));
 }
 
-const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
+// const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
+// const TESTFILE: &str = "/dump/wordlists/rockyou-withcount.txt";
+const TESTFILE: &str = "testdata";
 
 fn main() {
     try_linereader(TESTFILE);
