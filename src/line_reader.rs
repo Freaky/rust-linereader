@@ -82,8 +82,6 @@ impl<T: io::Read> LineReader<T> {
         match self.refill() {
             Ok(true) => self.next_line(),
             Ok(false) => {
-                self.eof = true;
-
                 if self.end_of_buffer == self.pos {
                     None
                 } else {
