@@ -87,8 +87,4 @@ impl<T: io::Read> LineReader<T> {
             Err(e) => Some(Err(e)),
         }
     }
-
-    pub fn finish(self) -> T {
-        self.io
-    }
 }

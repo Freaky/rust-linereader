@@ -53,8 +53,6 @@ fn try_linereader(filename: &str) {
         count += 1;
     }
 
-    reader.finish();
-
     report("LineReader", count, bytes, start.elapsed());
 }
 
