@@ -1,8 +1,8 @@
-use std::io::prelude::*;
 use std::fs::File;
 use std::io::BufReader;
-use std::time::{Duration, Instant};
+use std::io::prelude::*;
 use std::str;
+use std::time::{Duration, Instant};
 
 extern crate memchr;
 
@@ -107,15 +107,13 @@ fn try_lines_iter(filename: &str) {
     report("lines()", count, bytes, start.elapsed());
 }
 
-const TESTFILE: &str = "Dickens_Charles_Pickwick_Papers.xml";
-// const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
-// const TESTFILE: &str = "/dump/wordlists/rockyou-withcount.txt";
-// const TESTFILE: &str = "testdata";
-
 fn main() {
-    try_baseline(TESTFILE);
-    try_linereader(TESTFILE);
-    try_read_until(TESTFILE);
-    try_read_line(TESTFILE);
-    try_lines_iter(TESTFILE);
+    use std::env;
+    for file in env::args().skip(1) {
+        try_baseline(&file);
+        try_linereader(&file);
+        try_read_until(&file);
+        try_read_line(&file);
+        try_lines_iter(&file);
+    }
 }
