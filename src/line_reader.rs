@@ -20,14 +20,14 @@ pub struct LineReader<T> {
     end_of_buffer: usize,
 }
 
-impl <T: io::Read>LineReader<T> {
+impl<T: io::Read> LineReader<T> {
     pub fn new(io: T) -> LineReader<T> {
         LineReader {
-             io,
-             buf: vec![0; 1024 * 128],
-             pos: 0,
-             end_of_complete: 0,
-             end_of_buffer: 0,
+            io,
+            buf: vec![0; 1024 * 128],
+            pos: 0,
+            end_of_complete: 0,
+            end_of_buffer: 0,
         }
     }
 
@@ -50,7 +50,13 @@ impl <T: io::Read>LineReader<T> {
         self.end_of_buffer += r;
 
         // Find the new last end of line, unless we're at EOF
-        self.end_of_complete = cmp::min(self.buf[..self.end_of_buffer].iter().rposition(|&c| c == NEWLINE).unwrap_or(self.end_of_buffer) + 1, self.end_of_buffer);
+        self.end_of_complete = cmp::min(
+            self.buf[..self.end_of_buffer]
+                .iter()
+                .rposition(|&c| c == NEWLINE)
+                .unwrap_or(self.end_of_buffer) + 1,
+            self.end_of_buffer,
+        );
 
         Ok(r > 0)
     }
@@ -60,16 +66,21 @@ impl <T: io::Read>LineReader<T> {
 
         if self.pos < end {
             let pos = self.pos;
-            let nextpos = cmp::min(1 + pos + self.buf[pos..end].iter().position(|&c| c == NEWLINE).unwrap_or(end), end);
+            let nextpos = cmp::min(
+                1 + pos
+                    + self.buf[pos..end]
+                        .iter()
+                        .position(|&c| c == NEWLINE)
+                        .unwrap_or(end),
+                end,
+            );
 
             self.pos = nextpos;
             return Some(Ok(&self.buf[pos..nextpos]));
         }
 
         match self.refill() {
-            Ok(true) => {
-                self.next_line()
-            },
+            Ok(true) => self.next_line(),
             Ok(false) => {
                 self.eof = true;
 
@@ -78,8 +89,8 @@ impl <T: io::Read>LineReader<T> {
                 } else {
                     Some(Ok(&self.buf[..self.end_of_buffer]))
                 }
-            },
-            Err(e) => { Some(Err(e)) }
+            }
+            Err(e) => Some(Err(e)),
         }
     }
 
@@ -87,4 +98,3 @@ impl <T: io::Read>LineReader<T> {
         self.io
     }
 }
-

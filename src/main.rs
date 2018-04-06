@@ -1,4 +1,3 @@
-
 use std::io;
 use std::io::prelude::*;
 use std::fs::File;
@@ -19,12 +18,20 @@ fn try_baseline(filename: &str) {
     loop {
         let r = infile.read(&mut buf[..]).unwrap_or(0);
         bytes += r;
-        if r == 0 { break; }
+        if r == 0 {
+            break;
+        }
     }
 
     let elapsed = start.elapsed();
-    let elapsed = (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!("128k blocks: {} bytes in {:.2} ({:.2} MB/s)", bytes, elapsed, ((bytes as f64) / elapsed) / (1024.0 * 1024.0));
+    let elapsed =
+        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
+    println!(
+        "128k blocks: {} bytes in {:.2} ({:.2} MB/s)",
+        bytes,
+        elapsed,
+        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
+    );
 }
 
 fn try_linereader(filename: &str) {
@@ -43,8 +50,15 @@ fn try_linereader(filename: &str) {
     }
 
     let elapsed = start.elapsed();
-    let elapsed = (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!("LineReader: {} lines {} bytes in {:.2} ({:.2} MB/s)", count, bytes, elapsed, ((bytes as f64) / elapsed) / (1024.0 * 1024.0));
+    let elapsed =
+        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
+    println!(
+        "LineReader: {} lines {} bytes in {:.2} ({:.2} MB/s)",
+        count,
+        bytes,
+        elapsed,
+        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
+    );
 }
 
 fn try_lines_read_until(filename: &str) {
@@ -62,10 +76,16 @@ fn try_lines_read_until(filename: &str) {
     }
 
     let elapsed = start.elapsed();
-    let elapsed = (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!("read_until: {} lines {} bytes in {:.2} ({:.2} MB/s)", count, bytes, elapsed, ((bytes as f64) / elapsed) / (1024.0 * 1024.0));
+    let elapsed =
+        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
+    println!(
+        "read_until: {} lines {} bytes in {:.2} ({:.2} MB/s)",
+        count,
+        bytes,
+        elapsed,
+        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
+    );
 }
-
 
 fn try_lines_iter(filename: &str) {
     let infile = File::open(filename).expect("open");
@@ -80,10 +100,16 @@ fn try_lines_iter(filename: &str) {
     }
 
     let elapsed = start.elapsed();
-    let elapsed = (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!("lines(): {} lines {} bytes in {:.2} ({:.2} MB/s)", count, bytes, elapsed, ((bytes as f64) / elapsed) / (1024.0 * 1024.0));
+    let elapsed =
+        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
+    println!(
+        "lines(): {} lines {} bytes in {:.2} ({:.2} MB/s)",
+        count,
+        bytes,
+        elapsed,
+        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
+    );
 }
-
 
 const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
 // const TESTFILE: &str = "/dump/wordlists/rockyou-withcount.txt";
