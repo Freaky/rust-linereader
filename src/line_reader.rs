@@ -1,21 +1,22 @@
 /*
 A fast line-oriented buffered reader.
 
-lines(): 501636842 lines in 175.270838902
-read_until: 501636842 lines in 120.907068634
-LineReader: 501636842 lines in 102.173938545
+128k blocks:                31603121046 bytes in 36.93 (816.03 MB/s)
+LineReader: 501636842 lines 31603121046 bytes in 85.75 (351.48 MB/s)
+read_until: 501636842 lines 31603121046 bytes in 119.34 (252.54 MB/s)
+lines():    501636842 lines 30599847362 bytes in 160.22 (182.14 MB/s)
 */
 
 use std::io;
+use std::cmp;
 
 const NEWLINE: u8 = b'\n';
 
 pub struct LineReader<T> {
     io: T,
-    eof: bool,
     buf: Vec<u8>,
-    pos: Option<usize>,
-    last_newline: usize,
+    pos: usize,
+    end_of_complete: usize,
     end_of_buffer: usize,
 }
 
@@ -23,23 +24,23 @@ impl <T: io::Read>LineReader<T> {
     pub fn new(io: T) -> LineReader<T> {
         LineReader {
              io,
-             eof: false,
              buf: vec![0; 1024 * 128],
-             pos: None,
-             last_newline: 0,
+             pos: 0,
+             end_of_complete: 0,
              end_of_buffer: 0,
         }
     }
 
     fn refill(&mut self) -> io::Result<bool> {
-        self.pos = Some(0);
+        assert!(self.pos == self.end_of_complete);
+        self.pos = 0;
 
         // Move the start of the next line, if any, to the start of buf
-        if self.last_newline > 0 {
-            let next_line_len = self.end_of_buffer - self.last_newline;
-            let (start, rest) = self.buf.split_at_mut(self.last_newline);
-            start[0..next_line_len].copy_from_slice(&rest[0..next_line_len]);
-            self.end_of_buffer = next_line_len;
+        let fragment_len = self.end_of_buffer - self.end_of_complete;
+        if self.end_of_complete < self.end_of_buffer {
+            let (start, rest) = self.buf.split_at_mut(self.end_of_complete);
+            start[0..fragment_len].copy_from_slice(&rest[0..fragment_len]);
+            self.end_of_buffer = fragment_len;
         } else {
             self.end_of_buffer = 0;
         }
@@ -48,39 +49,41 @@ impl <T: io::Read>LineReader<T> {
         let r = self.io.read(&mut self.buf[self.end_of_buffer..])?;
         self.end_of_buffer += r;
 
-        self.eof = r == 0;
         // Find the new last end of line, unless we're at EOF
-        // XXX: What's sensible behavior for missing newlines?
-        self.last_newline = self.buf[..self.end_of_buffer].iter().rposition(|&c| c == NEWLINE).unwrap_or(self.end_of_buffer);
+        self.end_of_complete = cmp::min(self.buf[..self.end_of_buffer].iter().rposition(|&c| c == NEWLINE).unwrap_or(self.end_of_buffer) + 1, self.end_of_buffer);
 
         Ok(r > 0)
     }
 
-    pub fn next_line(&mut self) -> io::Result<&[u8]> {
-        if self.eof {
-            return Err(Error::new(ErrorKind::Other, "EOF"));
-        }
-        use std::io::{Error, ErrorKind};
-        if let Some(pos) = self.pos {
-            let nextpos = 1 + pos + self.buf[pos..self.end_of_buffer].iter().position(|&c| c == NEWLINE).unwrap_or(self.buf.len() - pos);
-            // println!("current={} next={}", pos, nextpos);
-            if nextpos < self.last_newline {
-                // println!("advance to {}", nextpos);
-                self.pos = Some(nextpos);
-                return Ok(&self.buf[pos..nextpos]);
-            }
-        }
+    pub fn next_line(&mut self) -> Option<io::Result<&[u8]>> {
+        let end = cmp::min(self.end_of_complete, self.end_of_buffer);
 
-        // self.refill()?;
+        if self.pos < end {
+            let pos = self.pos;
+            let nextpos = cmp::min(1 + pos + self.buf[pos..end].iter().position(|&c| c == NEWLINE).unwrap_or(end), end);
+
+            self.pos = nextpos;
+            return Some(Ok(&self.buf[pos..nextpos]));
+        }
 
         match self.refill() {
-            Ok(true) => { self.next_line() },
-            Ok(false) => { Ok(&self.buf[..self.end_of_buffer]) },
-            Err(e) => { Err(e) }
+            Ok(true) => {
+                self.next_line()
+            },
+            Ok(false) => {
+                self.eof = true;
+
+                if self.end_of_buffer == self.pos {
+                    None
+                } else {
+                    Some(Ok(&self.buf[..self.end_of_buffer]))
+                }
+            },
+            Err(e) => { Some(Err(e)) }
         }
     }
 
-    pub fn finish(mut self) -> T {
+    pub fn finish(self) -> T {
         self.io
     }
 }
