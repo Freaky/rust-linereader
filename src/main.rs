@@ -1,12 +1,24 @@
-use std::io;
 use std::io::prelude::*;
 use std::fs::File;
 use std::io::BufReader;
-use std::time::Instant;
+use std::time::{Instant, Duration};
 use std::str;
 
 mod line_reader;
 use line_reader::*;
+
+fn report(name: &str, lines: usize, bytes: usize, elapsed: Duration) {
+    let elapsed =
+        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
+    println!(
+        "{}: {} lines {} bytes in {:.2}s ({:.2} MB/s)",
+        name,
+        lines,
+        bytes,
+        elapsed,
+        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
+    );
+}
 
 fn try_baseline(filename: &str) {
     let mut infile = File::open(filename).expect("open");
@@ -23,15 +35,7 @@ fn try_baseline(filename: &str) {
         }
     }
 
-    let elapsed = start.elapsed();
-    let elapsed =
-        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!(
-        "128k blocks: {} bytes in {:.2} ({:.2} MB/s)",
-        bytes,
-        elapsed,
-        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
-    );
+    report("128k blocks", 0, bytes, start.elapsed());
 }
 
 fn try_linereader(filename: &str) {
@@ -43,25 +47,16 @@ fn try_linereader(filename: &str) {
     let mut count = 0;
     let mut bytes = 0;
     while let Some(line) = reader.next_line() {
-        // let s = str::from_utf8(&line).unwrap();
-        // println!("Line:{}:eniL", s);
         bytes += line.unwrap().len();
         count += 1;
     }
 
-    let elapsed = start.elapsed();
-    let elapsed =
-        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!(
-        "LineReader: {} lines {} bytes in {:.2} ({:.2} MB/s)",
-        count,
-        bytes,
-        elapsed,
-        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
-    );
+    reader.finish();
+
+    report("LineReader", count, bytes, start.elapsed());
 }
 
-fn try_lines_read_until(filename: &str) {
+fn try_read_until(filename: &str) {
     let infile = File::open(filename).expect("open");
     let mut infile = BufReader::new(infile);
 
@@ -75,16 +70,24 @@ fn try_lines_read_until(filename: &str) {
         line.clear();
     }
 
-    let elapsed = start.elapsed();
-    let elapsed =
-        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!(
-        "read_until: {} lines {} bytes in {:.2} ({:.2} MB/s)",
-        count,
-        bytes,
-        elapsed,
-        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
-    );
+    report("read_until", count, bytes, start.elapsed());
+}
+
+fn try_read_line(filename: &str) {
+    let infile = File::open(filename).expect("open");
+    let mut infile = BufReader::new(infile);
+
+    let start = Instant::now();
+    let mut count = 0;
+    let mut bytes = 0;
+    let mut line = String::new();
+    while infile.read_line(&mut line).unwrap_or(0) > 0 {
+        bytes += line.len();
+        count += 1;
+        line.clear();
+    }
+
+    report("read_line", count, bytes, start.elapsed());
 }
 
 fn try_lines_iter(filename: &str) {
@@ -99,25 +102,17 @@ fn try_lines_iter(filename: &str) {
         count += 1;
     }
 
-    let elapsed = start.elapsed();
-    let elapsed =
-        (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
-    println!(
-        "lines(): {} lines {} bytes in {:.2} ({:.2} MB/s)",
-        count,
-        bytes,
-        elapsed,
-        ((bytes as f64) / elapsed) / (1024.0 * 1024.0)
-    );
+    report("lines()", count, bytes, start.elapsed());
 }
 
-const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
+const TESTFILE: &str = "/dump/wordlists/pwned-passwords-1.0.txt";
 // const TESTFILE: &str = "/dump/wordlists/rockyou-withcount.txt";
 // const TESTFILE: &str = "testdata";
 
 fn main() {
     try_baseline(TESTFILE);
     try_linereader(TESTFILE);
-    try_lines_read_until(TESTFILE);
+    try_read_until(TESTFILE);
+    try_read_line(TESTFILE);
     try_lines_iter(TESTFILE);
 }
