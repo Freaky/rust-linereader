@@ -1,14 +1,17 @@
 /*
 A fast line-oriented buffered reader.
 
-128k blocks:                31603121046 bytes in 36.93 (816.03 MB/s)
-LineReader: 501636842 lines 31603121046 bytes in 85.75 (351.48 MB/s)
-read_until: 501636842 lines 31603121046 bytes in 119.34 (252.54 MB/s)
-lines():    501636842 lines 30599847362 bytes in 160.22 (182.14 MB/s)
+128k blocks:        0 lines 31603121046 bytes in  36.85s (817.92 MB/s)
+LineReader: 501636842 lines 31603121046 bytes in  73.96s (407.52 MB/s)
+read_until: 501636842 lines 31603121046 bytes in 119.30s (252.62 MB/s)
+read_line:  501636842 lines 31603121046 bytes in 139.14s (216.61 MB/s)
+lines():    501636842 lines 30599847362 bytes in 167.17s (174.57 MB/s)
 */
 
 use std::io;
 use std::cmp;
+
+use memchr::{memchr, memrchr};
 
 const NEWLINE: u8 = b'\n';
 
@@ -24,7 +27,7 @@ impl<T: io::Read> LineReader<T> {
     pub fn new(io: T) -> LineReader<T> {
         LineReader {
             io,
-            buf: vec![0; 1024 * 128],
+            buf: vec![0; 1024 * 1024],
             pos: 0,
             end_of_complete: 0,
             end_of_buffer: 0,
@@ -37,7 +40,7 @@ impl<T: io::Read> LineReader<T> {
 
         // Move the start of the next line, if any, to the start of buf
         let fragment_len = self.end_of_buffer - self.end_of_complete;
-        if self.end_of_complete < self.end_of_buffer {
+        if fragment_len > 0 {
             let (start, rest) = self.buf.split_at_mut(self.end_of_complete);
             start[0..fragment_len].copy_from_slice(&rest[0..fragment_len]);
             self.end_of_buffer = fragment_len;
@@ -49,12 +52,9 @@ impl<T: io::Read> LineReader<T> {
         let r = self.io.read(&mut self.buf[self.end_of_buffer..])?;
         self.end_of_buffer += r;
 
-        // Find the new last end of line, unless we're at EOF
+        // Find the new last end of line
         self.end_of_complete = cmp::min(
-            self.buf[..self.end_of_buffer]
-                .iter()
-                .rposition(|&c| c == NEWLINE)
-                .unwrap_or(self.end_of_buffer) + 1,
+            1 + memrchr(NEWLINE, &self.buf[..self.end_of_buffer]).unwrap_or(self.end_of_buffer),
             self.end_of_buffer,
         );
 
@@ -67,11 +67,7 @@ impl<T: io::Read> LineReader<T> {
         if self.pos < end {
             let pos = self.pos;
             let nextpos = cmp::min(
-                1 + pos
-                    + self.buf[pos..end]
-                        .iter()
-                        .position(|&c| c == NEWLINE)
-                        .unwrap_or(end),
+                1 + pos + memchr(NEWLINE, &self.buf[pos..end]).unwrap_or(end),
                 end,
             );
 

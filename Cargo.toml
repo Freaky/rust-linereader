@@ -4,3 +4,7 @@ version = "0.1.0"
 authors = ["Thomas Hurst <tom@hur.st>"]
 
 [dependencies]
+memchr = "2"
+
+[profile.release]
+lto = true

@@ -1,8 +1,10 @@
 use std::io::prelude::*;
 use std::fs::File;
 use std::io::BufReader;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 use std::str;
+
+extern crate memchr;
 
 mod line_reader;
 use line_reader::*;
@@ -105,7 +107,7 @@ fn try_lines_iter(filename: &str) {
     report("lines()", count, bytes, start.elapsed());
 }
 
-const TESTFILE: &str = "/dump/wordlists/pwned-passwords-1.0.txt";
+const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
 // const TESTFILE: &str = "/dump/wordlists/rockyou-withcount.txt";
 // const TESTFILE: &str = "testdata";
 
