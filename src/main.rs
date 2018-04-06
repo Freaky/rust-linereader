@@ -9,6 +9,8 @@ extern crate memchr;
 mod line_reader;
 use line_reader::*;
 
+const BUFFER_SIZE: usize = 1024 * 1024;
+
 fn report(name: &str, lines: usize, bytes: usize, elapsed: Duration) {
     let elapsed =
         (elapsed.as_secs() as f64) + (f64::from(elapsed.subsec_nanos()) / 1_000_000_000.0);
@@ -43,7 +45,7 @@ fn try_baseline(filename: &str) {
 fn try_linereader(filename: &str) {
     let infile = File::open(filename).expect("open");
 
-    let mut reader = LineReader::new(infile);
+    let mut reader = LineReader::with_capacity(BUFFER_SIZE, infile);
 
     let start = Instant::now();
     let mut count = 0;
@@ -58,7 +60,7 @@ fn try_linereader(filename: &str) {
 
 fn try_read_until(filename: &str) {
     let infile = File::open(filename).expect("open");
-    let mut infile = BufReader::new(infile);
+    let mut infile = BufReader::with_capacity(BUFFER_SIZE, infile);
 
     let start = Instant::now();
     let mut count = 0;
@@ -75,7 +77,7 @@ fn try_read_until(filename: &str) {
 
 fn try_read_line(filename: &str) {
     let infile = File::open(filename).expect("open");
-    let mut infile = BufReader::new(infile);
+    let mut infile = BufReader::with_capacity(BUFFER_SIZE, infile);
 
     let start = Instant::now();
     let mut count = 0;
@@ -92,7 +94,7 @@ fn try_read_line(filename: &str) {
 
 fn try_lines_iter(filename: &str) {
     let infile = File::open(filename).expect("open");
-    let infile = BufReader::new(infile);
+    let infile = BufReader::with_capacity(BUFFER_SIZE, infile);
 
     let start = Instant::now();
     let mut bytes = 0;
@@ -105,7 +107,8 @@ fn try_lines_iter(filename: &str) {
     report("lines()", count, bytes, start.elapsed());
 }
 
-const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
+const TESTFILE: &str = "Dickens_Charles_Pickwick_Papers.xml";
+// const TESTFILE: &str = "/dump/wordlists/pwned-passwords-2.0.txt";
 // const TESTFILE: &str = "/dump/wordlists/rockyou-withcount.txt";
 // const TESTFILE: &str = "testdata";
 
