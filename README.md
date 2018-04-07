@@ -13,6 +13,22 @@ raw u8's, including the delimiter, and nothing more.
 
 Lines are limited to the size of the internal buffer (default 1MB).
 
+No crate or anything yet - I want a test suite first.  And an iterator version
+would be nice.
+
+    // Note BufReader will result in unnecessary copying, so, er, don't do that.
+    let mut file = File::open(myfile).expect("open");
+
+    // or LineReader::with_capacity(usize);
+    let reader = LineReader::new(file);
+
+    // optional
+    reader.set_delimiter(b'\n');
+
+    while let Some(line) = reader.next_line() {
+      line.expect("oh noes, an IO error");
+    }
+
 ## Performance
 
 Comparison with using typical BufReader methods against pwned-passwords-2.0.txt:
@@ -48,21 +64,3 @@ It's also surprisingly fast on debug builds (or stdlib is surprisingly slow):
 |lines()   | 220.28s|    453,968|   26.41 MB/s|
 
 Hmmm.
-
-## Usage
-
-No crate or anything yet - I want a test suite first.  And an iterator version
-would be nice.
-
-    // Note BufReader will result in unnecessary copying, so, er, don't do that.
-    let mut file = File::open(myfile).expect("open");
-
-    // or LineReader::with_capacity(usize);
-    let reader = LineReader::new(file);
-
-    // optional
-    reader.set_delimiter(b'\n');
-
-    while let Some(line) = reader.next_line() {
-      line.expect("oh noes, an IO error");
-    }
