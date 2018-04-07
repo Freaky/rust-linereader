@@ -19,8 +19,8 @@ Comparison with using typical BufReader methods against pwned-passwords-2.0.txt:
 
 Westmere Xeon 2.1GHz, FreeBSD/ZFS, 29GB, 501.6 million lines:
 
-| Method   | Time :| Lines/sec :| Bandwidth :|
-|----------|-------|-----------|-----------|
+| Method   | Time | Lines/sec | Bandwidth |
+|----------|------:|----------:|----------:|
 |128k read | 36.85s| 13,612,940|817.92 MB/s|
 |LineReader| 73.96s|  6,782,542|407.52 MB/s|
 |read_until|119.30s|  4,204,835|252.62 MB/s|
@@ -29,8 +29,8 @@ Westmere Xeon 2.1GHz, FreeBSD/ZFS, 29GB, 501.6 million lines:
 
 Haswell Xeon 3.4GHz, Windows 10 Subystem for Linux, 5.9GB, 100 million lines:
 
-| Method   | Time :| Lines/sec :| Bandwidth :|
-|----------|-------|-----------|-----------|
+| Method   | Time | Lines/sec | Bandwidth |
+|----------|-----:|----------:|------------:|
 |128k read | 1.83s| 54,644,809|3,282.17 MB/s|
 |LineReader| 2.98s| 33,557,047|2,016.28 MB/s|
 |read_until| 3.43s| 29,154,519|1,752.24 MB/s|
@@ -39,8 +39,8 @@ Haswell Xeon 3.4GHz, Windows 10 Subystem for Linux, 5.9GB, 100 million lines:
 
 It's also surprisingly fast on debug builds (or stdlib is surprisingly slow):
 
-| Method   | Time :| Lines/sec :| Bandwidth :|
-|----------|-------|-----------|-----------|
+| Method   | Time | Lines/sec | Bandwidth |
+|----------|-------:|----------:|------------:|
 |128k read |   1.82s| 54,945,055|3,296.37 MB/s|
 |LineReader|  29.17s|  3,428,180|  205.98 MB/s|
 |read_until| 368.02s|    271,724|   16.33 MB/s|
