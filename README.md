@@ -4,7 +4,7 @@ A fast line-oriented reader for Rust.
 
 ## Summary
 
-In my tests LineReader is 10-25% faster than the typically-recommended fastest
+In my tests LineReader is 1.1x-1.6x faster than the typically-recommended fastest
 stdlib option: `BufReader::read_until()`. It achieves this by avoiding copying
 from its own internal buffer, instead returning immutable slices of its own.
 
@@ -13,8 +13,7 @@ raw u8's, including the delimiter, and nothing more.
 
 Lines are limited to the size of the internal buffer (default 1MB).
 
-No crate or anything yet - I want a test suite first.  And an iterator version
-would be nice.
+No crate or anything yet - I want a test suite first.
 
     // Note BufReader will result in unnecessary copying, so, er, don't do that.
     let mut file = File::open(myfile).expect("open");
