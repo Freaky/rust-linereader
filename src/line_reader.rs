@@ -102,31 +102,30 @@ impl<R: io::Read> LineReader<R> {
             self.end_of_buffer = 0;
         }
 
-        let r;
         // Fill the rest of buf from the underlying IO
-        loop {
+        while self.end_of_buffer < self.buf.len() {
+            // Loop until we find a delimiter or read zero bytes.
             match self.inner.read(&mut self.buf[self.end_of_buffer..]) {
+                Ok(0) => {
+                    return Ok(false);
+                }
                 Ok(n) => {
-                    r = n;
-                    break;
+                    let lastpos = self.end_of_buffer;
+                    self.end_of_buffer += n;
+                    if let Some(nl) =
+                        memrchr(self.delimiter, &self.buf[lastpos..self.end_of_buffer])
+                    {
+                        self.end_of_complete = cmp::min(self.end_of_buffer, 1 + lastpos + nl);
+                        return Ok(true);
+                    }
                 }
-                Err(ref e) if e.kind() == ErrorKind::Interrupted => {
-                    continue;
-                }
+                Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
                 Err(e) => return Err(e),
             }
         }
 
-        self.end_of_buffer += r;
-
-        // Find the new last end of line
-        self.end_of_complete = cmp::min(
-            1 + memrchr(self.delimiter, &self.buf[..self.end_of_buffer])
-                .unwrap_or(self.end_of_buffer),
-            self.end_of_buffer,
-        );
-
-        Ok(r > 0)
+        // We read through until the end of the buffer.
+        Ok(true)
     }
 
     /// Reset the internal state of the buffer.  Next lines are read from wherever
