@@ -19,10 +19,9 @@ No crate or anything yet - I want a test suite first.
     let mut file = File::open(myfile).expect("open");
 
     // or LineReader::with_capacity(usize);
+    // or LineReader::with_delimiter(u8);
+    // or LineReader::with_delimiter_and_capacity(u8, usize)
     let reader = LineReader::new(file);
-
-    // optional
-    reader.set_delimiter(b'\n');
 
     while let Some(line) = reader.next_line() {
       line.expect("oh noes, an IO error");
