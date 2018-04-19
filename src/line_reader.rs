@@ -118,6 +118,14 @@ impl<R: io::Read> LineReader<R> {
         Ok(r > 0)
     }
 
+    /// Reset the internal state of the buffer.  Next lines are read from wherever
+    /// the reader happens to be.
+    pub fn reset(&mut self) {
+        self.pos = 0;
+        self.end_of_buffer = 0;
+        self.end_of_complete = 0;
+    }
+
     /// Get a reference to the reader.
     pub fn get_ref(&self) -> &R {
         &self.inner
