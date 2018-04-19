@@ -17,8 +17,8 @@ use memchr::{memchr, memrchr};
 const NEWLINE: u8 = b'\n';
 const DEFAULT_CAPACITY: usize = 1024 * 1024;
 
-pub struct LineReader<T> {
-    io: T,
+pub struct LineReader<R> {
+    inner: R,
     buf: Vec<u8>,
     pos: usize,
     delimiter: u8,
@@ -26,22 +26,22 @@ pub struct LineReader<T> {
     end_of_buffer: usize,
 }
 
-impl<T: io::Read> LineReader<T> {
-    pub fn new(io: T) -> Self {
-        Self::with_delimiter_and_capacity(NEWLINE, DEFAULT_CAPACITY, io)
+impl<R: io::Read> LineReader<R> {
+    pub fn new(inner: R) -> Self {
+        Self::with_delimiter_and_capacity(NEWLINE, DEFAULT_CAPACITY, inner)
     }
 
-    pub fn with_capacity(capacity: usize, io: T) -> Self {
-        Self::with_delimiter_and_capacity(NEWLINE, capacity, io)
+    pub fn with_capacity(capacity: usize, inner: R) -> Self {
+        Self::with_delimiter_and_capacity(NEWLINE, capacity, inner)
     }
 
-    pub fn with_delimiter(delimiter: u8, io: T) -> Self {
-        Self::with_delimiter_and_capacity(delimiter, DEFAULT_CAPACITY, io)
+    pub fn with_delimiter(delimiter: u8, inner: R) -> Self {
+        Self::with_delimiter_and_capacity(delimiter, DEFAULT_CAPACITY, inner)
     }
 
-    pub fn with_delimiter_and_capacity(delimiter: u8, capacity: usize, io: T) -> Self {
+    pub fn with_delimiter_and_capacity(delimiter: u8, capacity: usize, inner: R) -> Self {
         Self {
-            io,
+            inner,
             buf: vec![0; capacity],
             pos: 0,
             delimiter,
@@ -94,7 +94,7 @@ impl<T: io::Read> LineReader<T> {
         let r;
         // Fill the rest of buf from the underlying IO
         loop {
-            match self.io.read(&mut self.buf[self.end_of_buffer..]) {
+            match self.inner.read(&mut self.buf[self.end_of_buffer..]) {
                 Ok(n) => {
                     r = n;
                     break;
@@ -116,5 +116,21 @@ impl<T: io::Read> LineReader<T> {
         );
 
         Ok(r > 0)
+    }
+
+    /// Get a reference to the reader.
+    pub fn get_ref(&self) -> &R {
+        &self.inner
+    }
+
+    /// Get a mutable reference to the reader.
+    pub fn get_mut(&mut self) -> &mut R {
+        &mut self.inner
+    }
+
+    /// Unwrap this `LineReader`, returning the underlying reader and discarding any
+    /// unread buffered lines.
+    pub fn into_inner(self) -> R {
+        self.inner
     }
 }
