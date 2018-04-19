@@ -19,9 +19,9 @@ const DEFAULT_CAPACITY: usize = 1024 * 1024;
 
 pub struct LineReader<R> {
     inner: R,
+    delimiter: u8,
     buf: Vec<u8>,
     pos: usize,
-    delimiter: u8,
     end_of_complete: usize,
     end_of_buffer: usize,
 }
@@ -42,9 +42,9 @@ impl<R: io::Read> LineReader<R> {
     pub fn with_delimiter_and_capacity(delimiter: u8, capacity: usize, inner: R) -> Self {
         Self {
             inner,
+            delimiter,
             buf: vec![0; capacity],
             pos: 0,
-            delimiter,
             end_of_complete: 0,
             end_of_buffer: 0,
         }
