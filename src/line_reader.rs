@@ -17,6 +17,8 @@ use memchr::{memchr, memrchr};
 const NEWLINE: u8 = b'\n';
 const DEFAULT_CAPACITY: usize = 1024 * 1024;
 
+/// The `Linereader` struct adds buffered, byte-delimited (default: b'\n')
+/// reading to any io::Reader.
 pub struct LineReader<R> {
     inner: R,
     delimiter: u8,
@@ -27,18 +29,26 @@ pub struct LineReader<R> {
 }
 
 impl<R: io::Read> LineReader<R> {
+    /// Create a new `LineReader` around the reader with a default capacity
+    /// and delimiter of 1MiB and b'\n'.
     pub fn new(inner: R) -> Self {
         Self::with_delimiter_and_capacity(NEWLINE, DEFAULT_CAPACITY, inner)
     }
 
+    /// Create a new `LineReader` around the reader with a given capacity and
+    /// delimiter of b'\n'.  Line length is limited to the capacity.
     pub fn with_capacity(capacity: usize, inner: R) -> Self {
         Self::with_delimiter_and_capacity(NEWLINE, capacity, inner)
     }
 
+    /// Create a new `LineReader` around the reader with a default capacity of
+    /// 1MiB and the given delimiter.  Line length is limited to the capacity.
     pub fn with_delimiter(delimiter: u8, inner: R) -> Self {
         Self::with_delimiter_and_capacity(delimiter, DEFAULT_CAPACITY, inner)
     }
 
+    /// Create a new `LineReader` around the reader with a given capacity and
+    /// delimiter.  Line length is limited to the capacity.
     pub fn with_delimiter_and_capacity(delimiter: u8, capacity: usize, inner: R) -> Self {
         Self {
             inner,
@@ -50,6 +60,7 @@ impl<R: io::Read> LineReader<R> {
         }
     }
 
+    /// Get the next line from the reader or None on EOF.
     pub fn next_line(&mut self) -> Option<io::Result<&[u8]>> {
         let end = cmp::min(self.end_of_complete, self.end_of_buffer);
 
