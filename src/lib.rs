@@ -45,7 +45,7 @@ impl<R: io::Read> LineReader<R> {
     /// # use std::fs::File;
     /// # use std::io;
     /// # fn x() -> io::Result<()> {
-    /// let reader = LineReader::new(File::open("myfile.txt").unwrap());
+    /// let reader = LineReader::new(File::open("myfile.txt")?);
     /// # Ok(())
     /// # }
     /// ```
@@ -61,7 +61,7 @@ impl<R: io::Read> LineReader<R> {
     /// # use std::fs::File;
     /// # use std::io;
     /// # fn x() -> io::Result<()> {
-    /// let mut reader = LineReader::with_capacity(1024*64, File::open("myfile.txt").unwrap());
+    /// let mut reader = LineReader::with_capacity(1024*64, File::open("myfile.txt")?);
     /// # Ok(())
     /// # }
     /// ```
@@ -77,7 +77,7 @@ impl<R: io::Read> LineReader<R> {
     /// # use std::fs::File;
     /// # use std::io;
     /// # fn x() -> io::Result<()> {
-    /// let mut reader = LineReader::with_delimiter(b'\t', File::open("myfile.txt").unwrap());
+    /// let mut reader = LineReader::with_delimiter(b'\t', File::open("myfile.txt")?);
     /// # Ok(())
     /// # }
     /// ```
