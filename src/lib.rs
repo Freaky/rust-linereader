@@ -90,8 +90,8 @@ impl<R: io::Read> LineReader<R> {
     /// truncated to the buffer size due to length.
     ///
     /// ```no_run
-    /// #use std::fs::file;
-    /// #let reader = LineReader::new(File::new("myfile.txt")?);
+    /// # use std::fs::file;
+    /// # let reader = LineReader::new(File::new("myfile.txt")?);
     /// while let Some(line) = reader.next_line() {
     ///     let line = line?;  // unwrap io::Result to &[u8]
     /// }
