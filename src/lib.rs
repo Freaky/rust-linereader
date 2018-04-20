@@ -41,8 +41,13 @@ impl<R: io::Read> LineReader<R> {
     /// 1 MiB and delimiter of `\n`.
     ///
     /// ```no_run
-    /// # use std::fs::file;
-    /// let reader = LineReader::new(File::new("myfile.txt")?);
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn x() -> io::Result<()> {
+    /// let reader = LineReader::new(File::open("myfile.txt").unwrap());
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(inner: R) -> Self {
         Self::with_delimiter_and_capacity(NEWLINE, DEFAULT_CAPACITY, inner)
@@ -52,8 +57,13 @@ impl<R: io::Read> LineReader<R> {
     /// delimiter of `\n`.
     ///
     /// ```no_run
-    /// # use std::fs::file;
-    /// let reader = LineReader::with_capacity(1024*64, File::new("myfile.txt")?);
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn x() -> io::Result<()> {
+    /// let mut reader = LineReader::with_capacity(1024*64, File::open("myfile.txt").unwrap());
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with_capacity(capacity: usize, inner: R) -> Self {
         Self::with_delimiter_and_capacity(NEWLINE, capacity, inner)
@@ -63,8 +73,13 @@ impl<R: io::Read> LineReader<R> {
     /// 1 MiB and the given delimiter.
     ///
     /// ```no_run
-    /// # use std::fs::file;
-    /// let reader = LineReader::with_delimiter(b'\t', File::new("myfile.txt")?);
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn x() -> io::Result<()> {
+    /// let mut reader = LineReader::with_delimiter(b'\t', File::open("myfile.txt").unwrap());
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with_delimiter(delimiter: u8, inner: R) -> Self {
         Self::with_delimiter_and_capacity(delimiter, DEFAULT_CAPACITY, inner)
@@ -74,8 +89,13 @@ impl<R: io::Read> LineReader<R> {
     /// delimiter.
     ///
     /// ```no_run
-    /// # use std::fs::file;
-    /// let reader = LineReader::with_delimiter_and_capacity(b'\t', 1024*64, File::new("myfile.txt")?);
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn x() -> io::Result<()> {
+    /// let mut reader = LineReader::with_delimiter_and_capacity(b'\t', 1024*64, File::open("myfile.txt")?);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with_delimiter_and_capacity(delimiter: u8, capacity: usize, inner: R) -> Self {
         Self {
@@ -93,11 +113,16 @@ impl<R: io::Read> LineReader<R> {
     /// truncated to the buffer size due to length.
     ///
     /// ```no_run
-    /// # use std::fs::file;
-    /// # let reader = LineReader::new(File::new("myfile.txt")?);
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn x() -> io::Result<()> {
+    /// # let mut reader = LineReader::new(File::open("myfile.txt")?);
     /// while let Some(line) = reader.next_line() {
     ///     let line = line?;  // unwrap io::Result to &[u8]
     /// }
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn next_line(&mut self) -> Option<io::Result<&[u8]>> {
         let end = cmp::min(self.end_of_complete, self.end_of_buffer);
@@ -188,5 +213,24 @@ impl<R: io::Read> LineReader<R> {
     /// unread buffered lines.
     pub fn into_inner(self) -> R {
         self.inner
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use LineReader;
+
+    #[test]
+    fn test_next_line() {
+        let buf: &[u8] = b"0a0\n1bb1\n2ccc2\n3dddd3\n4eeeee4\n5ffffffff5\n6xxx6";
+        let mut reader = LineReader::with_capacity(8, buf);
+        assert_eq!(b"0a0\n", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"1bb1\n", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"2ccc2\n", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"3dddd3\n", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"4eeeee4\n", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"5fffffff", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"f5\n", reader.next_line().unwrap().unwrap());
+        assert_eq!(b"6xxx6", reader.next_line().unwrap().unwrap());
     }
 }
