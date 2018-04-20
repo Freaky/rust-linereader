@@ -158,8 +158,14 @@ impl<R: io::Read> LineReader<R> {
         // Move the start of the next line, if any, to the start of buf
         let fragment_len = self.end_of_buffer - self.end_of_complete;
         if fragment_len > 0 {
-            let (start, rest) = self.buf.split_at_mut(self.end_of_complete);
-            start[0..fragment_len].copy_from_slice(&rest[0..fragment_len]);
+            if fragment_len > self.end_of_complete {
+                // Overlaps - hopefully quite rare.
+                self.buf.drain(..self.end_of_complete);
+                self.buf.extend(vec![0; self.end_of_complete]);
+            } else {
+                let (start, rest) = self.buf.split_at_mut(self.end_of_complete);
+                start[0..fragment_len].copy_from_slice(&rest[0..fragment_len]);
+            }
             self.end_of_buffer = fragment_len;
         } else {
             self.end_of_buffer = 0;
@@ -180,6 +186,8 @@ impl<R: io::Read> LineReader<R> {
                     {
                         self.end_of_complete = cmp::min(self.end_of_buffer, 1 + lastpos + nl);
                         return Ok(true);
+                    } else {
+                        self.end_of_complete = self.end_of_buffer;
                     }
                 }
                 Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
@@ -222,15 +230,25 @@ mod tests {
 
     #[test]
     fn test_next_line() {
-        let buf: &[u8] = b"0a0\n1bb1\n2ccc2\n3dddd3\n4eeeee4\n5ffffffff5\n6xxx6";
+        let buf: &[u8] = b"0a0\n1bb1\n2ccc2\n3dddd3\n4eeeee4\n5ffffffff5\n6ggggg6\n7hhhhhh7";
         let mut reader = LineReader::with_capacity(8, buf);
         assert_eq!(b"0a0\n", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
         assert_eq!(b"1bb1\n", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
         assert_eq!(b"2ccc2\n", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
         assert_eq!(b"3dddd3\n", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
         assert_eq!(b"4eeeee4\n", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
         assert_eq!(b"5fffffff", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
         assert_eq!(b"f5\n", reader.next_line().unwrap().unwrap());
-        assert_eq!(b"6xxx6", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
+        assert_eq!(b"6ggggg6\n", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
+        assert_eq!(b"7hhhhhh7", reader.next_line().unwrap().unwrap());
+        println!("{:?}", reader);
     }
 }
