@@ -4,10 +4,8 @@ use std::io::prelude::*;
 use std::str;
 use std::time::{Duration, Instant};
 
-extern crate memchr;
-
-mod line_reader;
-use line_reader::*;
+extern crate linereader;
+use linereader::LineReader;
 
 const BUFFER_SIZE: usize = 1024 * 1024;
 
@@ -31,12 +29,11 @@ fn try_baseline(filename: &str) {
     let mut bytes = 0;
 
     let mut buf = [0; 1024 * 128];
-    loop {
-        let r = infile.read(&mut buf[..]).unwrap_or(0);
-        bytes += r;
+    while let Ok(r) = infile.read(&mut buf[..]) {
         if r == 0 {
             break;
         }
+        bytes += r;
     }
 
     report("128k blocks", 0, bytes, start.elapsed());

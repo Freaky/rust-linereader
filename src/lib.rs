@@ -1,6 +1,10 @@
-/*
-A fast line-oriented buffered reader.
+//! LineReader
+//!
+//! A fast byte-delimiter-oriented buffered reader, offering a faster alternative
+//! to `read_until` that returns byte slices into its internal buffer rather than
+//! copying them out to one you provide.
 
+/*
 128k blocks:        0 lines 31603121046 bytes in  36.85s (817.92 MB/s)
 LineReader: 501636842 lines 31603121046 bytes in  73.96s (407.52 MB/s)
 read_until: 501636842 lines 31603121046 bytes in 119.30s (252.62 MB/s)
@@ -12,6 +16,7 @@ use std::cmp;
 use std::io;
 use std::io::ErrorKind;
 
+extern crate memchr;
 use memchr::{memchr, memrchr};
 
 const NEWLINE: u8 = b'\n';
@@ -30,25 +35,45 @@ pub struct LineReader<R> {
 
 impl<R: io::Read> LineReader<R> {
     /// Create a new `LineReader` around the reader with a default capacity
-    /// and delimiter of 1MiB and b'\n'.
+    /// and delimiter of 1MiB and b'\n'
+    ///
+    /// ```no_run
+    /// # use std::fs::file;
+    /// let reader = LineReader::new(File::new("myfile.txt")?);
+    /// ```
     pub fn new(inner: R) -> Self {
         Self::with_delimiter_and_capacity(NEWLINE, DEFAULT_CAPACITY, inner)
     }
 
     /// Create a new `LineReader` around the reader with a given capacity and
     /// delimiter of b'\n'.  Line length is limited to the capacity.
+    ///
+    /// ```no_run
+    /// # use std::fs::file;
+    /// let reader = LineReader::with_capacity(1024*64, File::new("myfile.txt")?);
+    /// ```
     pub fn with_capacity(capacity: usize, inner: R) -> Self {
         Self::with_delimiter_and_capacity(NEWLINE, capacity, inner)
     }
 
     /// Create a new `LineReader` around the reader with a default capacity of
     /// 1MiB and the given delimiter.  Line length is limited to the capacity.
+    ///
+    /// ```no_run
+    /// # use std::fs::file;
+    /// let reader = LineReader::with_delimiter(b'\t', File::new("myfile.txt")?);
+    /// ```
     pub fn with_delimiter(delimiter: u8, inner: R) -> Self {
         Self::with_delimiter_and_capacity(delimiter, DEFAULT_CAPACITY, inner)
     }
 
     /// Create a new `LineReader` around the reader with a given capacity and
     /// delimiter.  Line length is limited to the capacity.
+    ///
+    /// ```no_run
+    /// # use std::fs::file;
+    /// let reader = LineReader::with_delimiter_and_capacity(b'\t', 1024*64, File::new("myfile.txt")?);
+    /// ```
     pub fn with_delimiter_and_capacity(delimiter: u8, capacity: usize, inner: R) -> Self {
         Self {
             inner,
@@ -60,7 +85,17 @@ impl<R: io::Read> LineReader<R> {
         }
     }
 
-    /// Get the next line from the reader or None on EOF.
+    /// Get the next line from the reader, an IO error, or `None` on EOF.  The delimiter
+    /// is included in any returned slice, unless the file ends without one or a line was
+    /// truncated to the buffer size due to length.
+    ///
+    /// ```no_run
+    /// #use std::fs::file;
+    /// #let reader = LineReader::new(File::new("myfile.txt")?);
+    /// while let Some(line) = reader.next_line() {
+    ///     let line = line?;  // unwrap io::Result to &[u8]
+    /// }
+    /// ```
     pub fn next_line(&mut self) -> Option<io::Result<&[u8]>> {
         let end = cmp::min(self.end_of_complete, self.end_of_buffer);
 
