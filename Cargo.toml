@@ -1,5 +1,5 @@
 [package]
-name = "rusty-lines"
+name = "linereader"
 version = "0.1.0"
 authors = ["Thomas Hurst <tom@hur.st>"]
 
