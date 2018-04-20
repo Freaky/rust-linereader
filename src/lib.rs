@@ -3,6 +3,9 @@
 //! A fast byte-delimiter-oriented buffered reader, offering a faster alternative
 //! to `read_until` that returns byte slices into its internal buffer rather than
 //! copying them out to one you provide.
+//!
+//! Because the internal buffer is fixed, lines longer than the buffer will be
+//! split.
 
 /*
 128k blocks:        0 lines 31603121046 bytes in  36.85s (817.92 MB/s)
@@ -22,7 +25,7 @@ use memchr::{memchr, memrchr};
 const NEWLINE: u8 = b'\n';
 const DEFAULT_CAPACITY: usize = 1024 * 1024;
 
-/// The `Linereader` struct adds buffered, byte-delimited (default: b'\n')
+/// The `LineReader` struct adds buffered, byte-delimited (default: `\n`)
 /// reading to any io::Reader.
 pub struct LineReader<R> {
     inner: R,
@@ -34,8 +37,8 @@ pub struct LineReader<R> {
 }
 
 impl<R: io::Read> LineReader<R> {
-    /// Create a new `LineReader` around the reader with a default capacity
-    /// and delimiter of 1MiB and b'\n'
+    /// Create a new `LineReader` around the reader with a default capacity of
+    /// 1 MiB and delimiter of `\n`.
     ///
     /// ```no_run
     /// # use std::fs::file;
@@ -46,7 +49,7 @@ impl<R: io::Read> LineReader<R> {
     }
 
     /// Create a new `LineReader` around the reader with a given capacity and
-    /// delimiter of b'\n'.  Line length is limited to the capacity.
+    /// delimiter of `\n`.
     ///
     /// ```no_run
     /// # use std::fs::file;
@@ -57,7 +60,7 @@ impl<R: io::Read> LineReader<R> {
     }
 
     /// Create a new `LineReader` around the reader with a default capacity of
-    /// 1MiB and the given delimiter.  Line length is limited to the capacity.
+    /// 1 MiB and the given delimiter.
     ///
     /// ```no_run
     /// # use std::fs::file;
@@ -68,7 +71,7 @@ impl<R: io::Read> LineReader<R> {
     }
 
     /// Create a new `LineReader` around the reader with a given capacity and
-    /// delimiter.  Line length is limited to the capacity.
+    /// delimiter.
     ///
     /// ```no_run
     /// # use std::fs::file;
