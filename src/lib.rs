@@ -40,31 +40,11 @@ use std::fmt;
 
 impl<R: io::Read> fmt::Debug for LineReader<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.buf.len() < 80 {
-            write!(f, "[")?;
-            for _ in 0..self.buf.len() {
-                write!(f, "-")?
-            }
-            write!(f, "]\nP")?;
-            for _ in 0..self.pos {
-                write!(f, "X")?;
-            }
-            write!(f, "\nC")?;
-            for _ in 0..self.end_of_complete {
-                write!(f, "#")?;
-            }
-            write!(f, "\nU")?;
-            for _ in 0..self.end_of_buffer {
-                write!(f, "=")?;
-            }
-            write!(f, "\n")
-        } else {
-            write!(
-                f,
-                "LineReader {{ delimiter: {:?}, pos: {}, end_of_complete: {}, end_of_buffer: {} }}",
-                self.delimiter, self.pos, self.end_of_complete, self.end_of_buffer
-            )
-        }
+        write!(
+            f,
+            "LineReader {{ delimiter: {:?}, pos: {}, end_of_complete: {}, end_of_buffer: {} }}",
+            self.delimiter, self.pos, self.end_of_complete, self.end_of_buffer
+        )
     }
 }
 
