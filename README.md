@@ -1,5 +1,4 @@
-LineReader
-----------
+# LineReader [![Build Status](https://travis-ci.org/Freaky/rust-linereader.svg?branch=master)](https://travis-ci.org/Freaky/rust-linereader)
 A fast line-oriented reader for Rust.
 
 ## Summary
@@ -13,7 +12,8 @@ raw u8's, including the delimiter, and nothing more.
 
 Lines are limited to the size of the internal buffer (default 1MB).
 
-No crate or anything yet - I want a test suite first.
+    extern crate linereader;
+    use linereader::LineReader;
 
     // Note BufReader will result in unnecessary copying, so, er, don't do that.
     let mut file = File::open(myfile).expect("open");
@@ -24,7 +24,8 @@ No crate or anything yet - I want a test suite first.
     let reader = LineReader::new(file);
 
     while let Some(line) = reader.next_line() {
-      line.expect("oh noes, an IO error");
+        let line = line.expect("oh noes, an IO error");
+        // line is a &[u8] owned by reader.
     }
 
 ## Performance
