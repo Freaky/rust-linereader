@@ -157,7 +157,7 @@ impl<R: io::Read> LineReader<R> {
     /// # }
     /// ```
     pub fn next_line(&mut self) -> Option<io::Result<&[u8]>> {
-        let end = cmp::min(self.end_of_complete, self.end_of_buffer);
+        let end = self.end_of_complete;
 
         if self.pos < end {
             let pos = self.pos;
@@ -176,6 +176,7 @@ impl<R: io::Read> LineReader<R> {
                 if self.end_of_buffer == self.pos {
                     None
                 } else {
+                    self.pos = self.end_of_buffer;
                     Some(Ok(&self.buf[..self.end_of_buffer]))
                 }
             }
@@ -185,6 +186,8 @@ impl<R: io::Read> LineReader<R> {
 
     fn refill(&mut self) -> io::Result<bool> {
         assert!(self.pos == self.end_of_complete);
+        assert!(self.end_of_complete <= self.end_of_buffer);
+
         self.pos = 0;
 
         // Move the start of the next line, if any, to the start of buf
@@ -208,6 +211,7 @@ impl<R: io::Read> LineReader<R> {
             // Loop until we find a delimiter or read zero bytes.
             match self.inner.read(&mut self.buf[self.end_of_buffer..]) {
                 Ok(0) => {
+                    self.end_of_complete = self.end_of_buffer;
                     return Ok(false);
                 }
                 Ok(n) => {
@@ -219,6 +223,7 @@ impl<R: io::Read> LineReader<R> {
                         self.end_of_complete = cmp::min(self.end_of_buffer, 1 + lastpos + nl);
                         return Ok(true);
                     } else {
+                        // No delimiter - see if we can read any more.
                         self.end_of_complete = self.end_of_buffer;
                     }
                 }
@@ -264,24 +269,17 @@ mod tests {
     fn test_next_line() {
         let buf: &[u8] = b"0a0\n1bb1\n2ccc2\n3dddd3\n4eeeee4\n5ffffffff5\n6ggggg6\n7hhhhhh7";
         let mut reader = LineReader::with_capacity(8, buf);
+
         assert_eq!(b"0a0\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"1bb1\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"2ccc2\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"3dddd3\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"4eeeee4\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"5fffffff", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"f5\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"6ggggg6\n", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
         assert_eq!(b"7hhhhhh7", reader.next_line().unwrap().unwrap());
-        println!("{:?}", reader);
+        assert!(reader.next_line().is_none());
     }
 
     extern crate rand;
@@ -292,25 +290,29 @@ mod tests {
     #[test]
     fn test_next_line_randomly() {
         let mut rng = rand::thread_rng();
-        let max_line = 256;
 
         for _ in 1..128 {
             let mut buf = [0u8; 65535];
             rng.fill_bytes(&mut buf);
+            let delimiter = rng.gen::<u8>();
+            let max_line = rng.gen::<u8>().saturating_add(8) as usize;
 
-            let mut reader = LineReader::with_capacity(max_line, Cursor::new(&buf[..]));
+            let mut reader =
+                LineReader::with_delimiter_and_capacity(delimiter, max_line, Cursor::new(&buf[..]));
             let mut cursor = Cursor::new(&buf[..]);
             let mut expected = vec![];
 
             while cursor
                 .by_ref()
                 .take(max_line as u64)
-                .read_until(b'\n', &mut expected)
-                .unwrap_or(0) > 0
+                .read_until(delimiter, &mut expected)
+                .unwrap() > 0
             {
                 assert_eq!(expected, reader.next_line().unwrap().unwrap());
                 expected.clear();
             }
+
+            assert!(reader.next_line().is_none());
         }
     }
 }
