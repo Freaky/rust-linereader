@@ -137,17 +137,16 @@ impl<R: io::Read> LineReader<R> {
     /// # }
     /// ```
     pub fn next_line(&mut self) -> Option<io::Result<&[u8]>> {
-        let end = self.end_of_complete;
-
-        if self.pos < end {
-            let pos = self.pos;
-            let nextpos = cmp::min(
-                1 + pos + memchr(self.delimiter, &self.buf[pos..end]).unwrap_or(end),
-                end,
+        if self.pos < self.end_of_complete {
+            let lastpos = self.pos;
+            self.pos = cmp::min(
+                1 + lastpos
+                    + memchr(self.delimiter, &self.buf[lastpos..self.end_of_complete])
+                        .unwrap_or(self.end_of_complete),
+                self.end_of_complete,
             );
 
-            self.pos = nextpos;
-            return Some(Ok(&self.buf[pos..nextpos]));
+            return Some(Ok(&self.buf[lastpos..self.pos]));
         }
 
         match self.refill() {
