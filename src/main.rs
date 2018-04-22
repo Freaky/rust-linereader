@@ -42,13 +42,17 @@ impl Report {
         Self { lines, bytes }
     }
 
-    fn report(&self, name: &str, bytes: u64, lines: u64, elapsed: Duration) {
-        if bytes != self.bytes {
-            println!("Warning: expected {} bytes, read {}", self.bytes, bytes);
+    fn report(&self, name: &str, bytes: Option<u64>, lines: Option<u64>, elapsed: Duration) {
+        if let Some(bytes) = bytes {
+            if bytes != self.bytes {
+                println!("Warning: expected {} bytes, read {}", self.bytes, bytes);
+            }
         }
 
-        if lines != self.lines {
-            println!("Warning: expected {} lines, read {}", self.lines, lines);
+        if let Some(lines) = lines {
+            if lines != self.lines {
+                println!("Warning: expected {} lines, read {}", self.lines, lines);
+            }
         }
 
         let elapsed =
@@ -68,7 +72,6 @@ fn try_baseline(report: &Report, filename: &str) {
 
     let start = Instant::now();
     let mut bytes = 0_u64;
-    let mut lines = 0_u64;
 
     let mut buf = [0; BUFFER_SIZE];
     while let Ok(r) = infile.read(&mut buf[..]) {
@@ -76,10 +79,9 @@ fn try_baseline(report: &Report, filename: &str) {
             break;
         }
         bytes += r as u64;
-        lines += Memchr::new(b'\n', &buf[..r]).count() as u64;
     }
 
-    report.report("read() 1 MiB", bytes, lines, start.elapsed());
+    report.report("read() 1 MiB", Some(bytes), None, start.elapsed());
 }
 
 fn try_linereader_batch(report: &Report, filename: &str) {
@@ -88,15 +90,13 @@ fn try_linereader_batch(report: &Report, filename: &str) {
     let mut reader = LineReader::with_capacity(BUFFER_SIZE, infile);
 
     let start = Instant::now();
-    let mut lines = 0_u64;
     let mut bytes = 0_u64;
     while let Some(batch) = reader.next_batch() {
         let batch = batch.unwrap();
         bytes += batch.len() as u64;
-        lines += Memchr::new(b'\n', batch).count() as u64;
     }
 
-    report.report("LR::next_batch()", bytes, lines, start.elapsed());
+    report.report("LR::next_batch()", Some(bytes), None, start.elapsed());
 }
 
 fn try_linereader(report: &Report, filename: &str) {
@@ -112,7 +112,7 @@ fn try_linereader(report: &Report, filename: &str) {
         lines += 1;
     }
 
-    report.report("LR::next_line()", bytes, lines, start.elapsed());
+    report.report("LR::next_line()", Some(bytes), Some(lines), start.elapsed());
 }
 
 fn try_read_until(report: &Report, filename: &str) {
@@ -129,7 +129,7 @@ fn try_read_until(report: &Report, filename: &str) {
         line.clear();
     }
 
-    report.report("read_until()", bytes, lines, start.elapsed());
+    report.report("read_until()", Some(bytes), Some(lines), start.elapsed());
 }
 
 fn try_read_line(report: &Report, filename: &str) {
@@ -146,7 +146,7 @@ fn try_read_line(report: &Report, filename: &str) {
         line.clear();
     }
 
-    report.report("read_line()", bytes, lines, start.elapsed());
+    report.report("read_line()", Some(bytes), Some(lines), start.elapsed());
 }
 
 fn try_lines_iter(report: &Report, filename: &str) {
@@ -155,13 +155,11 @@ fn try_lines_iter(report: &Report, filename: &str) {
 
     let start = Instant::now();
     let mut lines = 0_u64;
-    let mut bytes = 0_u64;
-    for line in infile.lines() {
-        bytes += line.unwrap().len() as u64;
+    for _line in infile.lines() {
         lines += 1;
     }
 
-    report.report("lines()", bytes, lines, start.elapsed());
+    report.report("lines()", None, Some(lines), start.elapsed());
 }
 
 fn main() {
