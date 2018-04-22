@@ -36,6 +36,38 @@ pub struct LineReader<R> {
     end_of_buffer: usize,
 }
 
+use std::fmt;
+
+impl<R: io::Read> fmt::Debug for LineReader<R> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.buf.len() < 80 {
+            write!(f, "[")?;
+            for _ in 0..self.buf.len() {
+                write!(f, "-")?
+            }
+            write!(f, "]\nP")?;
+            for _ in 0..self.pos {
+                write!(f, "X")?;
+            }
+            write!(f, "\nC")?;
+            for _ in 0..self.end_of_complete {
+                write!(f, "#")?;
+            }
+            write!(f, "\nU")?;
+            for _ in 0..self.end_of_buffer {
+                write!(f, "=")?;
+            }
+            write!(f, "\n")
+        } else {
+            write!(
+                f,
+                "LineReader {{ delimiter: {:?}, pos: {}, end_of_complete: {}, end_of_buffer: {} }}",
+                self.delimiter, self.pos, self.end_of_complete, self.end_of_buffer
+            )
+        }
+    }
+}
+
 impl<R: io::Read> LineReader<R> {
     /// Create a new `LineReader` around the reader with a default capacity of
     /// 1 MiB and delimiter of `\n`.
@@ -250,5 +282,35 @@ mod tests {
         println!("{:?}", reader);
         assert_eq!(b"7hhhhhh7", reader.next_line().unwrap().unwrap());
         println!("{:?}", reader);
+    }
+
+    extern crate rand;
+    use std::io::BufRead;
+    use std::io::{Cursor, Read};
+    use tests::rand::Rng;
+
+    #[test]
+    fn test_next_line_randomly() {
+        let mut rng = rand::thread_rng();
+        let max_line = 256;
+
+        for _ in 1..128 {
+            let mut buf = [0u8; 65535];
+            rng.fill_bytes(&mut buf);
+
+            let mut reader = LineReader::with_capacity(max_line, Cursor::new(&buf[..]));
+            let mut cursor = Cursor::new(&buf[..]);
+            let mut expected = vec![];
+
+            while cursor
+                .by_ref()
+                .take(max_line as u64)
+                .read_until(b'\n', &mut expected)
+                .unwrap_or(0) > 0
+            {
+                assert_eq!(expected, reader.next_line().unwrap().unwrap());
+                expected.clear();
+            }
+        }
     }
 }
