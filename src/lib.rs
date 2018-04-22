@@ -164,6 +164,39 @@ impl<R: io::Read> LineReader<R> {
         }
     }
 
+    /// Return a slice of complete lines, up to the size of the internal buffer.
+    ///
+    /// This is functionally identical to next_line, only instead of getting up
+    /// to the *first* instance of the delimiter, you get up to the *last*.
+    ///
+    /// This is anticipated to be used in multithreaded processing; take a batch
+    /// of complete lines, copy the slice and pass it onto workers having done the
+    /// minimum work in the input thread; a `read()`, a `memrchr()` to find the last
+    /// delimiter, and a copy.
+    ///
+    /// The copy is left up to you in case you have other reasons for wanting
+    /// batches.  Something higher level, like an iterator, will be forthcoming.
+    pub fn next_batch(&mut self) -> Option<io::Result<&[u8]>> {
+        if self.pos < self.end_of_complete {
+            let ret = &self.buf[self.pos..self.end_of_complete];
+            self.pos = self.end_of_complete;
+            return Some(Ok(ret));
+        }
+
+        match self.refill() {
+            Ok(true) => self.next_batch(),
+            Ok(false) => {
+                if self.end_of_buffer == self.pos {
+                    None
+                } else {
+                    self.pos = self.end_of_buffer;
+                    Some(Ok(&self.buf[..self.end_of_buffer]))
+                }
+            }
+            Err(e) => Some(Err(e)),
+        }
+    }
+
     fn refill(&mut self) -> io::Result<bool> {
         assert!(self.pos == self.end_of_complete);
         assert!(self.end_of_complete <= self.end_of_buffer);
@@ -260,6 +293,20 @@ mod tests {
         assert_eq!(b"6ggggg6\n", reader.next_line().unwrap().unwrap());
         assert_eq!(b"7hhhhhh7", reader.next_line().unwrap().unwrap());
         assert!(reader.next_line().is_none());
+    }
+
+    #[test]
+    fn test_next_batch() {
+        let buf: &[u8] = b"0a0\n1bb1\n2ccc2\n3dddd3\n4eeeee4\n5ffffffff5\n6ggggg6\n7hhhhhh7";
+        let mut reader = LineReader::with_capacity(19, buf);
+
+        assert_eq!(b"0a0\n1bb1\n2ccc2\n", reader.next_batch().unwrap().unwrap());
+        assert_eq!(b"3dddd3\n4eeeee4\n", reader.next_batch().unwrap().unwrap());
+        assert_eq!(
+            b"5ffffffff5\n6ggggg6\n",
+            reader.next_batch().unwrap().unwrap()
+        );
+        assert_eq!(b"7hhhhhh7", reader.next_batch().unwrap().unwrap());
     }
 
     extern crate rand;

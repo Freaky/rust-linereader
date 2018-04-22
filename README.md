@@ -28,6 +28,15 @@ Lines are limited to the size of the internal buffer (default 1MB).
         // line is a &[u8] owned by reader.
     }
 
+Lines can also be read in batches for group processing - e.g. in threads:
+
+    while let Some(lines) = reader.next_batch() {
+        send(&chan, lines.unwrap().to_vec());
+    }
+
+This should be more efficient than finding each intermediate delimiter in the main
+thread, and allocating and sending each individual line.
+
 ## Performance
 
 Comparison with using typical BufReader methods against pwned-passwords-2.0.txt:
