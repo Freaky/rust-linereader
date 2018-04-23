@@ -18,7 +18,6 @@ lines():    501636842 lines 30599847362 bytes in 167.17s (174.57 MB/s)
 use std::cmp;
 use std::io;
 use std::io::ErrorKind;
-use std::ptr;
 
 extern crate memchr;
 use memchr::{memchr, memrchr};
@@ -219,30 +218,14 @@ impl<R: io::Read> LineReader<R> {
         // Move the start of the next line, if any, to the start of buf
         let fragment_len = self.end_of_buffer - self.end_of_complete;
         if fragment_len > 0 {
+            // unsafe variants of these using ptr::copy/copy_nonoverlapping can
+            // be found in 5ccea2c - they made no appreciable difference.
             if fragment_len > self.end_of_complete {
-                unsafe {
-                    ptr::copy(
-                        (&mut self.buf[self.end_of_complete..self.end_of_buffer]).as_mut_ptr(),
-                        self.buf.as_mut_ptr(),
-                        fragment_len,
-                    );
-                }
-
-            // Overlaps - hopefully quite rare.
-
-            // self.buf.drain(..self.end_of_complete);
-            // self.buf.extend(vec![0_u8; self.end_of_complete]);
+                self.buf.drain(..self.end_of_complete);
+                self.buf.extend(vec![0_u8; self.end_of_complete]);
             } else {
-                unsafe {
-                    ptr::copy_nonoverlapping(
-                        (&mut self.buf[self.end_of_complete..self.end_of_buffer]).as_mut_ptr(),
-                        self.buf.as_mut_ptr(),
-                        fragment_len,
-                    );
-                }
-
-                // let (start, rest) = self.buf.split_at_mut(self.end_of_complete);
-                // start[0..fragment_len].copy_from_slice(&rest[0..fragment_len]);
+                let (start, rest) = self.buf.split_at_mut(self.end_of_complete);
+                start[0..fragment_len].copy_from_slice(&rest[0..fragment_len]);
             }
             self.end_of_buffer = fragment_len;
         } else {
