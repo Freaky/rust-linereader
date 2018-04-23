@@ -175,6 +175,19 @@ impl<R: io::Read> LineReader<R> {
     ///
     /// The copy is left up to you in case you have other reasons for wanting
     /// batches.  Something higher level, like an iterator, will be forthcoming.
+    ///
+    /// ```no_run
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn x() -> io::Result<()> {
+    /// # let mut reader = LineReader::new(File::open("myfile.txt")?);
+    /// while let Some(lines) = reader.next_batch() {
+    ///     let lines = lines?;  // unwrap io::Result to &[u8]
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn next_batch(&mut self) -> Option<io::Result<&[u8]>> {
         if self.pos < self.end_of_complete {
             let ret = &self.buf[self.pos..self.end_of_complete];
