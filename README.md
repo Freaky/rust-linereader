@@ -1,74 +1,97 @@
 # LineReader [![Build Status](https://travis-ci.org/Freaky/rust-linereader.svg?branch=master)](https://travis-ci.org/Freaky/rust-linereader)
-A fast line-oriented reader for Rust.
 
-## Summary
+## Synopsis
 
-In my tests LineReader is 1.1x-1.6x faster than the typically-recommended fastest
-stdlib option: `BufReader::read_until()`. It achieves this by avoiding copying
-from its own internal buffer, instead returning immutable slices of its own.
+The `LineReader` struct is a byte-delimiter-focused buffered reader meant as a
+faster, less error-prone alternative to `BufRead::read_until`.
 
-Like `read_until`, it does *not* perform UTF-8 processing - you get a slice of
-raw u8's, including the delimiter, and nothing more.
+It provides two main functions:
 
-Lines are limited to the size of the internal buffer (default 1MB).
+
+### `next_line()`
+
+Returns `Option<io::Result<&[u8]>>` - `None` on end-of-file, an IO error from the
+wrapped reader, or an immutable byte slice ending on and including any delimiter.
+
+Line length is limited to the size of the internal buffer.
+
+In contrast with `read_until`, detecting end-of-file is more natural with the
+use of `Option`; line length is naturally limited to some sensible value without
+the use of `by_ref().take(limit)`; copying is minimised by returning borrowed
+slices; you'll never forget to call `buf.clear()`.
+
+
+### `next_batch()`
+
+Behaves identically to `next_line()`, except it returns a slice of *all* the complete
+lines in the buffer.
+
+
+## Example
 
     extern crate linereader;
     use linereader::LineReader;
 
-    // Note BufReader will result in unnecessary copying, so, er, don't do that.
     let mut file = File::open(myfile).expect("open");
 
-    // or LineReader::with_capacity(usize);
-    // or LineReader::with_delimiter(u8);
-    // or LineReader::with_delimiter_and_capacity(u8, usize)
-    let reader = LineReader::new(file);
+    // Defaults to a 1 MiB buffer and b'\n' delimiter; change with one of:
+    //  * LineReader::with_capacity(usize);
+    //  * LineReader::with_delimiter(u8);
+    //  * LineReader::with_delimiter_and_capacity(u8, usize)
+    let mut reader = LineReader::new(file);
 
     while let Some(line) = reader.next_line() {
-        let line = line.expect("oh noes, an IO error");
+        let line = line.expect("read error");
         // line is a &[u8] owned by reader.
     }
 
 Lines can also be read in batches for group processing - e.g. in threads:
 
     while let Some(lines) = reader.next_batch() {
-        send(&chan, lines.unwrap().to_vec());
+        send(&chan, lines.expect("read error").to_vec());
     }
 
 This should be more efficient than finding each intermediate delimiter in the main
-thread, and allocating and sending each individual line.
+thread, and allocating and sending each individual line.  Any line fragments at
+the end of the internal buffer will be copied to the start in the next call.
+
 
 ## Performance
 
-Comparison with using typical BufReader methods against pwned-passwords-2.0.txt:
+Tests performed using ['Dickens_Charles_Pickwick_Papers.xml'](http://hur.st/Dickens_Charles_Pickwick_Papers.xml.xz),
+concatinated to itself 480 times.  The resulting file is 976 MB and 10.3 million lines long.
 
-Westmere Xeon 2.1GHz, FreeBSD/ZFS, 29GB, 501.6 million lines:
+Buffers in each test are set to 1 MiB.
 
-| Method   | Time | Lines/sec | Bandwidth |
-|----------|------:|----------:|----------:|
-|128k read | 36.85s| 13,612,940|817.92 MB/s|
-|LineReader| 73.96s|  6,782,542|407.52 MB/s|
-|read_until|119.30s|  4,204,835|252.62 MB/s|
-|read_line |139.14s|  3,605,267|216.61 MB/s|
-|lines()   |167.17s|  3,000,759|174.57 MB/s|
+### Westmere Xeon 2.1GHz, FreeBSD/ZFS.
 
-Haswell Xeon 3.4GHz, Windows 10 Subystem for Linux, 5.9GB, 100 million lines:
+| Method           |  Time   |  Lines/sec  |   Bandwidth   |
+|------------------|--------:|------------:|--------------:|
+| read()           |   1.82s |   5,674,452/s |   535.21 MB/s |
+| LR::next_batch() |   1.83s |   5,650,387/s |   532.94 MB/s |
+| LR::next_line()  |   3.10s |   3,341,796/s |   315.20 MB/s |
+| read_until()     |   3.62s |   2,861,864/s |   269.93 MB/s |
+| read_line()      |   4.25s |   2,432,505/s |   229.43 MB/s |
+| lines()          |   4.88s |   2,119,837/s |   199.94 MB/s |
 
-| Method   | Time | Lines/sec | Bandwidth |
-|----------|-----:|----------:|------------:|
-|128k read | 1.83s| 54,644,809|3,282.17 MB/s|
-|LineReader| 2.98s| 33,557,047|2,016.28 MB/s|
-|read_until| 3.43s| 29,154,519|1,752.24 MB/s|
-|read_line | 5.17s| 19,342,360|1,162.51 MB/s|
-|lines()   | 7.83s| 12,771,392|  742.52 MB/s|
+### Haswell Xeon 3.4GHz, Windows 10 Subystem for Linux.
+
+| Method           |  Time   |  Lines/sec  |   Bandwidth   |
+|------------------|--------:|------------:|--------------:|
+| read()           |   0.26s |  39,253,494/s |  3702.36 MB/s |
+| LR::next_batch() |   0.26s |  39,477,365/s |  3723.47 MB/s |
+| LR::next_line()  |   0.50s |  20,672,784/s |  1949.84 MB/s |
+| read_until()     |   0.60s |  17,303,147/s |  1632.02 MB/s |
+| read_line()      |   0.84s |  12,293,247/s |  1159.49 MB/s |
+| lines()          |   1.53s |   6,783,849/s |   639.85 MB/s |
 
 It's also surprisingly fast on debug builds (or stdlib is surprisingly slow):
 
-| Method   | Time | Lines/sec | Bandwidth |
-|----------|-------:|----------:|------------:|
-|128k read |   1.82s| 54,945,055|3,296.37 MB/s|
-|LineReader|  29.17s|  3,428,180|  205.98 MB/s|
-|read_until| 368.02s|    271,724|   16.33 MB/s|
-|read_line | 383.00s|    261,097|   15.69 MB/s|
-|lines()   | 220.28s|    453,968|   26.41 MB/s|
-
-Hmmm.
+| Method           |  Time   |  Lines/sec  |   Bandwidth   |
+|------------------|--------:|------------:|--------------:|
+| read()           |   0.27s |  38,258,105/s |  3608.47 MB/s |
+| LR::next_batch() |   0.28s |  36,896,353/s |  3480.04 MB/s |
+| LR::next_line()  |   2.99s |   3,463,911/s |   326.71 MB/s |
+| read_until()     |  57.01s |     181,505/s |    17.12 MB/s |
+| read_line()      |  58.36s |     177,322/s |    16.72 MB/s |
+| lines()          |  21.06s |     491,320/s |    46.34 MB/s |
