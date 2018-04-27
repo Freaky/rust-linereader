@@ -2,6 +2,17 @@
 name = "linereader"
 version = "0.2.0"
 authors = ["Thomas Hurst <tom@hur.st>"]
+description = "An efficient buffered line reader."
+homepage = "https://github.com/Freaky/rust-linereader"
+repository = "https://github.com/Freaky/rust-linereader.git"
+readme = "README.md"
+keywords = ["line", "reader"]
+categories = ["parsing", "text-processing"]
+license = "MIT"
+
+[badges]
+travis-ci = { repository = "Freaky/rust-linereader" }
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 memchr = "2"
