@@ -168,14 +168,6 @@ impl<R: io::Read> LineReader<R> {
     /// This is functionally identical to next_line, only instead of getting up
     /// to the *first* instance of the delimiter, you get up to the *last*.
     ///
-    /// This is anticipated to be used in multithreaded processing; take a batch
-    /// of complete lines, copy the slice and pass it onto workers having done the
-    /// minimum work in the input thread; a `read()`, a `memrchr()` to find the last
-    /// delimiter, and a copy.
-    ///
-    /// The copy is left up to you in case you have other reasons for wanting
-    /// batches.  Something higher level, like an iterator, will be forthcoming.
-    ///
     /// ```no_run
     /// # use linereader::LineReader;
     /// # use std::fs::File;
