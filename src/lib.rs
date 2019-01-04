@@ -82,7 +82,7 @@ impl<R: io::Read> LineReader<R> {
     }
 
     /// Create a new `LineReader` around the reader with a default capacity of
-    /// 1 MiB and the given delimiter.
+    /// 64 KiB and the given delimiter.
     ///
     /// ```no_run
     /// # use linereader::LineReader;
