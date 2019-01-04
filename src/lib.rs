@@ -23,7 +23,7 @@ extern crate memchr;
 use memchr::{memchr, memrchr};
 
 const NEWLINE: u8 = b'\n';
-const DEFAULT_CAPACITY: usize = 1024 * 1024;
+const DEFAULT_CAPACITY: usize = 1024 * 64;
 
 /// The `LineReader` struct adds buffered, byte-delimited (default: `\n`)
 /// reading to any io::Reader.
@@ -50,7 +50,7 @@ impl<R: io::Read> fmt::Debug for LineReader<R> {
 
 impl<R: io::Read> LineReader<R> {
     /// Create a new `LineReader` around the reader with a default capacity of
-    /// 1 MiB and delimiter of `\n`.
+    /// 64 KiB and delimiter of `\n`.
     ///
     /// ```no_run
     /// # use linereader::LineReader;
@@ -73,7 +73,7 @@ impl<R: io::Read> LineReader<R> {
     /// # use std::fs::File;
     /// # use std::io;
     /// # fn x() -> io::Result<()> {
-    /// let mut reader = LineReader::with_capacity(1024*64, File::open("myfile.txt")?);
+    /// let mut reader = LineReader::with_capacity(1024*512, File::open("myfile.txt")?);
     /// # Ok(())
     /// # }
     /// ```
@@ -105,7 +105,7 @@ impl<R: io::Read> LineReader<R> {
     /// # use std::fs::File;
     /// # use std::io;
     /// # fn x() -> io::Result<()> {
-    /// let mut reader = LineReader::with_delimiter_and_capacity(b'\t', 1024*64, File::open("myfile.txt")?);
+    /// let mut reader = LineReader::with_delimiter_and_capacity(b'\t', 1024*512, File::open("myfile.txt")?);
     /// # Ok(())
     /// # }
     /// ```

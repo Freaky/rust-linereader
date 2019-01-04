@@ -10,7 +10,7 @@ extern crate memchr;
 
 use memchr::Memchr;
 
-const BUFFER_SIZE: usize = 1024 * 1024;
+const BUFFER_SIZE: usize = 1024 * 64;
 
 struct Report {
     lines: u64,
@@ -81,7 +81,7 @@ fn try_baseline(report: &Report, filename: &str) {
         bytes += r as u64;
     }
 
-    report.report("read() 1 MiB", Some(bytes), None, start.elapsed());
+    report.report("read()", Some(bytes), None, start.elapsed());
 }
 
 fn try_linereader_batch(report: &Report, filename: &str) {
