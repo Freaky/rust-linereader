@@ -12,7 +12,6 @@ license = "MIT"
 
 [badges]
 travis-ci = { repository = "Freaky/rust-linereader" }
-maintenance = { status = "actively-developed" }
 
 [dependencies]
 memchr = "2"
