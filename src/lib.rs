@@ -317,15 +317,15 @@ mod tests {
     extern crate rand;
     use std::io::BufRead;
     use std::io::{Cursor, Read};
-    use tests::rand::Rng;
+    use tests::rand::prelude::*;
 
     #[test]
     fn test_next_line_randomly() {
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
 
         for _ in 1..128 {
             let mut buf = [0u8; 65535];
-            rng.fill_bytes(&mut buf);
+            rng.fill(&mut buf[..]);
             let delimiter = rng.gen::<u8>();
             let max_line = rng.gen::<u8>().saturating_add(8) as usize;
 
