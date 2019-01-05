@@ -1,6 +1,6 @@
 [package]
 name = "linereader"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Thomas Hurst <tom@hur.st>"]
 description = "An efficient buffered line reader."
 homepage = "https://github.com/Freaky/rust-linereader"
