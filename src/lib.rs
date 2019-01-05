@@ -120,6 +120,29 @@ impl<R: io::Read> LineReader<R> {
         }
     }
 
+    /// Run the given closure for each line while the closure returns true.
+    ///
+    /// ```no_run
+    /// # use linereader::LineReader;
+    /// # use std::fs::File;
+    /// # use std::io;
+    /// # fn solve(x: &[u8]) { }
+    /// # fn x() -> io::Result<()> {
+    /// # let mut reader = LineReader::new(File::open("myfile.txt")?);
+    /// reader.for_each(|line| { if line.len() == 42 { solve(line); true } else { false } })?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn for_each<F: FnMut(&[u8]) -> bool>(&mut self, mut f: F) -> io::Result<()> {
+        while let Some(line) = self.next_line() {
+            if !f(line?) {
+                break;
+            }
+        }
+
+        Ok(())
+    }
+
     /// Get the next line from the reader, an IO error, or `None` on EOF.  The delimiter
     /// is included in any returned slice, unless the file ends without one or a line was
     /// truncated to the buffer size due to length.
@@ -312,6 +335,20 @@ mod tests {
             reader.next_batch().unwrap().unwrap()
         );
         assert_eq!(b"7hhhhhh7", reader.next_batch().unwrap().unwrap());
+    }
+
+    #[test]
+    fn test_for_each() {
+        let buf: &[u8] = b"f\nba\nbaz\n";
+        let mut reader = LineReader::new(buf);
+
+        let mut len = 2;
+        reader.for_each(|l| { assert_eq!(len, l.len()); len += 1; true }).unwrap();
+
+        let buf: &[u8] = b"f\nba\nbaz\n";
+        let mut reader = LineReader::new(buf);
+
+        reader.for_each(|l| { assert_eq!(l.len(), 2); false }).unwrap();
     }
 
     extern crate rand;

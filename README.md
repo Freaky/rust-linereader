@@ -5,7 +5,7 @@
 `LineReader` is a byte-delimiter-focused buffered reader for Rust, meant as a
 faster, less error-prone alternative to `BufRead::read_until`.
 
-It provides two main functions:
+It provides three main functions:
 
 
 ### `next_line()`
@@ -26,6 +26,13 @@ slices; you'll never forget to call `buf.clear()`.
 
 Behaves identically to `next_line()`, except it returns a slice of *all* the
 complete lines in the buffer.
+
+
+### `for_each()`
+
+Calls a closure on each line of the input, while the closure returns true and
+no IO errors are detected.  Such errors terminate iteration and are returned
+from the function.
 
 
 ## Example
