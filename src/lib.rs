@@ -120,22 +120,32 @@ impl<R: io::Read> LineReader<R> {
         }
     }
 
-    /// Run the given closure for each line while the closure returns true.
+    /// Run the given closure for each line while while the closure returns `Ok(true)`.
+    ///
+    /// If either the reader or the closure return an error, iteration ends and the error is returned.
     ///
     /// ```no_run
     /// # use linereader::LineReader;
     /// # use std::fs::File;
     /// # use std::io;
-    /// # fn solve(x: &[u8]) { }
     /// # fn x() -> io::Result<()> {
-    /// # let mut reader = LineReader::new(File::open("myfile.txt")?);
-    /// reader.for_each(|line| { if line.len() == 42 { solve(line); true } else { false } })?;
+    /// let buf: &[u8] = b"foo\nbar\nbaz";
+    /// let mut reader = LineReader::new(buf);
+    /// let mut lines = vec![];
+    /// reader.for_each(|line| {
+    ///     lines.push(line.to_vec());
+    ///     Ok(true)
+    /// })?;
+    /// assert_eq!(lines.len(), 3);
+    /// assert_eq!(lines[0], b"foo\n");
+    /// assert_eq!(lines[1], b"bar\n");
+    /// assert_eq!(lines[2], b"baz");
     /// # Ok(())
     /// # }
     /// ```
-    pub fn for_each<F: FnMut(&[u8]) -> bool>(&mut self, mut f: F) -> io::Result<()> {
+    pub fn for_each<F: FnMut(&[u8]) -> io::Result<bool>>(&mut self, mut f: F) -> io::Result<()> {
         while let Some(line) = self.next_line() {
-            if !f(line?) {
+            if !f(line?)? {
                 break;
             }
         }
@@ -343,12 +353,12 @@ mod tests {
         let mut reader = LineReader::new(buf);
 
         let mut len = 2;
-        reader.for_each(|l| { assert_eq!(len, l.len()); len += 1; true }).unwrap();
+        reader.for_each(|l| { assert_eq!(len, l.len()); len += 1; Ok(true) }).unwrap();
 
         let buf: &[u8] = b"f\nba\nbaz\n";
         let mut reader = LineReader::new(buf);
 
-        reader.for_each(|l| { assert_eq!(l.len(), 2); false }).unwrap();
+        reader.for_each(|l| { assert_eq!(l.len(), 2); Ok(false) }).unwrap();
     }
 
     extern crate rand;
