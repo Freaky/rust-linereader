@@ -7,11 +7,10 @@ faster, less error-prone alternative to `BufRead::read_until`.
 
 It provides three main functions:
 
+### `next_line() -> Option<io::Result<&[u8]>>`
 
-### `next_line()`
-
-Returns `Option<io::Result<&[u8]>>` - `None` on end-of-file, an IO error from the
-wrapped reader, or an immutable byte slice ending on and including any delimiter.
+Returns `None` on end-of-file, or an `io::Result`-wrapped byte slice of the next
+line from the reader.
 
 Line length is limited to the size of the internal buffer - longer lines will be
 spread across multiple reads.
@@ -21,19 +20,16 @@ use of `Option`; line length is naturally limited to some sensible value without
 the use of `by_ref().take(limit)`; copying is minimised by returning borrowed
 slices; you'll never forget to call `buf.clear()`.
 
-
-### `next_batch()`
+### `next_batch() -> Option<io::Result<&[u8]>>`
 
 Behaves identically to `next_line()`, except it returns a slice of *all* the
 complete lines in the buffer.
 
+### `for_each() -> io::Result<()>`
 
-### `for_each()`
-
-Calls a closure on each line of the input, while the closure returns true and
-no IO errors are detected.  Such errors terminate iteration and are returned
+Calls a closure on each line of the input, while the closure returns `Ok(true)`
+and no IO errors are detected.  Such errors terminate iteration and are returned
 from the function.
-
 
 ## Example
 
@@ -54,6 +50,27 @@ while let Some(line) = reader.next_line() {
     // line is a &[u8] owned by reader.
 }
 ```
+
+## Safety
+
+`LineReader` contains no `unsafe` code, but it does hand out manually-calculated
+slice positions from an internal buffer, and the only enforcement Rust performs
+is to ensure they remain within that buffer.
+
+There is no incomplete line detection, and as documented, lines that extend
+beyond the configured buffer can be spread across multiple "lines", with only
+the lack of a terminating delimiter as a hint.  Care should be taken that this
+doesn't cause undesired behaviour in code using the library.
+
+Methods such as `get_mut()` offer direct access to the wrapped reader, and their
+use without also calling `reset()` could result in undesired behaviour if the
+reader's state is changed.
+
+## Alternatives
+
+[bstr](https://crates.io/crates/bstr): as of 0.2.8 the `for_byte_line` and
+`for_byte_line_with_terminator` `BufRead` extension trait functions should
+perform similarly, without `LineReader`'s line length limitations.
 
 ## Performance
 
